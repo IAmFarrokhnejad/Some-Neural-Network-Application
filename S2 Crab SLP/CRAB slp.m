@@ -1,4 +1,4 @@
-#This code performs several tasks related to training and testing a single layer perceptron neural network using data from the CSV file 'crabs.csv'
+%This code performs several tasks related to training and testing a single layer perceptron neural network using data from the CSV file 'crabs.csv'
 
 
 
