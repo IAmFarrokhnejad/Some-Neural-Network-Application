@@ -1,4 +1,4 @@
-#This code demonstrates the implementation of a simple, single layer perceptron neural network using MATLAB
+%This code demonstrates the implementation of a simple, single layer perceptron neural network using MATLAB
 
 i=[ 8, 10, 6, 5, 15, 2, 20, 2; 5, 6, 2, 2, 6, 4, 4, 3];
 t=[1, 1, 0, 0, 1, 0, 1, 0];
