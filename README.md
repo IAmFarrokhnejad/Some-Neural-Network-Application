@@ -2,4 +2,7 @@
 This repository contains various NN codes converted from Matlab to Python
 
 
-The intial Matlab codes were written by Prof. Dr. Ahmet Rizaner: https://scholar.google.com/citations?hl=tr&user=A5l1iE8AAAAJ&view_op=list_works&sortby=pubdate
+The Matlab codes were initially developed by Prof. Dr. Ahmet Rizaner: https://scholar.google.com/citations?hl=tr&user=A5l1iE8AAAAJ&view_op=list_works&sortby=pubdate
+
+
+We implemented minor modifications on the Matlab files and converted them into Python.
