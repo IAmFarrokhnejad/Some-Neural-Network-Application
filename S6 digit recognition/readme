@@ -1,0 +1,1 @@
+This code structure outlines the process of importing image data, preparing it for training, constructing the neural networks, and training them using backpropagation. There are separate files for importing training and testing data, which helps in organizing the workflow.
