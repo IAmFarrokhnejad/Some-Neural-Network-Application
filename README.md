@@ -9,4 +9,4 @@ We implemented minor modifications on the Matlab files and converted them into P
 
 
 
-Note: Before running each Python code, make sure to install the required libraries.
+Note: Before running each Python code, make sure to install the required libraries unless they are intrinsically integrated with Python.
