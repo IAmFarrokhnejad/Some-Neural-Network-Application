@@ -53,7 +53,7 @@ class Perceptron:
         return np.where(linear_output >= 0, 1, 0).flatten()
 
 # Load and prepare data
-data = np.genfromtxt('Path to dataset goes here', delimiter=',') # CHANGE THIS PATH AND TEST THE CODE LATER
+data = np.genfromtxt('Path to the datase goes here', delimiter=',') # CHANGE THIS PATH to the path of the dataset
 X = data[:-1, :].T  # Samples as rows, features as columns
 T = data[-1, :]     # 1D array of targets
 
