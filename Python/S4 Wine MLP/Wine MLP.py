@@ -5,70 +5,78 @@
 #Credits: Morteza Farrokhnejad, Ali Farrokhnejad
 #Based on the original work by Prof. Dr. Ahmet Rizaner
 
+
 import numpy as np
-import neurolab as nl
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.preprocessing import StandardScaler, LabelBinarizer
+from sklearn.model_selection import train_test_split
 import warnings
-warnings.filterwarnings('ignore') # Ignore warnings for float overflow in exponent when training
+warnings.filterwarnings('ignore')
 
-# Import data from file; SPECIFY PATH TO DATASET
-data = np.genfromtxt('PATH\\TO\\DATASET', delimiter=',')
-X = data[:-3, :].T # Each row contains one data sample
-T = data[-3:, :].reshape(3,178).T # Target classes (each row corresponds to respective row in X)
+def load_and_prepare_data(path):
+    data = np.genfromtxt(path, delimiter=',')
+    X = data[:-3, :].T  # Input features (13 dimensions)
+    T = data[-3:, :].T   # One-hot encoded targets
+    
+    # Convert one-hot to class labels
+    y = T.argmax(axis=1)
+    
+    # Standardize features
+    scaler = StandardScaler().fit(X)
+    return scaler.transform(X), y
 
-# Adjust target values to 0.1 and 0.9
-T = 0.8 * T + 0.1
+def create_model():
+    return MLPClassifier(
+        hidden_layer_sizes=(50, 30),
+        activation='relu',
+        solver='adam',
+        alpha=0.001,
+        learning_rate_init=0.001,
+        max_iter=2000,
+        early_stopping=True,
+        validation_fraction=0.2,
+        n_iter_no_change=50,
+        random_state=42,
+        verbose=True
+    )
 
-# First part - 13-20-3 feedforward neural network
+def evaluate_model(model, X, y_true, title):
+    y_pred = model.predict(X)
+    cm = confusion_matrix(y_true, y_pred)
+    
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp.plot()
+    plt.title(title)
+    plt.show()
+    
+    accuracy = np.mean(y_true == y_pred)
+    print(f"Accuracy ({title}): {accuracy*100:.2f}%")
+    return accuracy
 
-# Shuffle data
-rinx = np.random.permutation(178)
-xt = X[rinx, :]
-tt = T[rinx, :]
+# Load and prepare data
+X, y = load_and_prepare_data('path to the dataset goes here') # Specify the dataset path 
 
-# Create neural network
-net = nl.net.newff(np.column_stack((X.min(axis=0), X.max(axis=0))), [20, 3], [nl.net.trans.LogSig(), nl.net.trans.PureLin()])
+# Stratified train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
 
-# Split data into training and testing sets
-Xtr = xt[:150, :]
-Ttr = tt[:150, :]
-Xts = xt[150:, :]
-Tts = tt[150:, :]
+# Create and train model
+model = create_model()
+model.fit(X_train, y_train)
 
-# Configure neural network parameters
-net.train(Xtr, Ttr, epochs=1000, show=10, goal=1e-7)
+# Evaluate performance
+train_acc = evaluate_model(model, X_train, y_train, "Training Set")
+test_acc = evaluate_model(model, X_test, y_test, "Testing Set")
 
-# Evaluate trained network on the training set
-Ytr = net.sim(Xtr)
-
-# Plot confusion matrix for the training set
-cmtr = confusion_matrix(Ttr.argmax(axis=1), Ytr.argmax(axis=1))
-cmtrDisp = ConfusionMatrixDisplay(confusion_matrix=cmtr)
-cmtrDisp.plot()
-plt.title('Confusion Matrix - Training Set')
-
-# Print results
-print(f'Training confusion matrix:\n{cmtr}')
-
-c = (sum(sum(cmtr))-sum(cmtr.diagonal()))/sum(sum(cmtr)) # Wrong classifications
-print(f'Percentage Correct Classification: {100 * (1-c):.2f}%')
-
-# Evaluate the trained network on the testing set   
-Yts = net.sim(Xts) 
-
-# Plot confusion matrix for the testing set
-cmts = confusion_matrix(Tts.argmax(axis=1), Yts.argmax(axis=1))
-cmtsDisp = ConfusionMatrixDisplay(confusion_matrix=cmts)
-cmtsDisp.plot()
-plt.title('Confusion Matrix - Testing Set')
-
-# Print results
-print(f'Testing confusion matrix:\n{cmts}')
-
-c = (sum(sum(cmts))-sum(cmts.diagonal()))/sum(sum(cmts)) #Wrong classifications
-print(f'Percentage Correct Classification: {100 * (1-c):.2f}%')
-
-# Show plots
+# Plot learning curve
+plt.figure(figsize=(8, 4))
+plt.plot(model.loss_curve_, label='Training Loss')
+if hasattr(model, 'validation_scores_'):
+    plt.plot(model.validation_scores_, label='Validation Accuracy')
+plt.title('Learning Curves')
+plt.xlabel('Epochs')
+plt.legend()
 plt.show()
