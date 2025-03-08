@@ -16,7 +16,7 @@ This repository contains various Neural Network applications in Matlab and Pytho
 2. ~Crab SLP~
 3. ~Crab MLP~
 4. ~Wine MLP~
-5. Image Processing 
+5. ~Image Processing~
 6. Digit Recognition
 7. Pattern Association
 8. Function Approximation

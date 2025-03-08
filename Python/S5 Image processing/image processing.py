@@ -37,7 +37,7 @@ def corrupt(matrix, percentage):
     return matrix_flat.reshape(matrix.shape)
 
 # Show PT.bmp 
-pt = imageio.imread('Lab 5\\PT.bmp')
+pt = imageio.imread('PT.bmp')
 plt.imshow(pt)
 plt.show()
 
@@ -62,30 +62,30 @@ plt.show()
 x4 = corrupt(x3, 10)
 pchar(x4, 5, 5)
 
-c2 = imageio.imread('Lab 5\\sym2.bmp')
+c2 = imageio.imread('sym2.bmp')
 plt.imshow(c2)
 plt.show()
 
-c1 = imageio.imread('Lab 5\\sym1.bmp')
+c1 = imageio.imread('sym1.bmp')
 c1v = mkvec(c1)
 c1b = -mbplr(c1)
 pchar(c1b, 80, 80)
 
-c3 = imageio.imread('Lab 5\\sym3.bmp')
+c3 = imageio.imread('sym3.bmp')
 c3v = mkvec(c3)
 c3b = -mbplr(c3)
 c3c = corrupt(c3b, 10)
 pchar(c3c, 80, 80)
 plt.show()
 
-image = imageio.imread('Lab 5\\monalisa.png')
+image = imageio.imread('monalisa.png')
 plt.imshow(image)
 plt.show()
 binimage = np.array(image > 127, dtype=np.int8)
 plt.imshow(binimage, cmap='gray')
 plt.show()
 
-image2 = imageio.imread('Lab 5\\lion.png')
+image2 = imageio.imread('lion.png')
 igray = np.array(Image.fromarray(image2).convert('L'))
 ibw = np.array(igray > 127, dtype=np.uint8)
 imagen = image2 + 2 * np.random.randn(*image2.shape)
