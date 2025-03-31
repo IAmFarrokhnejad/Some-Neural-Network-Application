@@ -45,8 +45,8 @@ def load_data(folder_path):
     return np.array(images), np.array(labels)
 
 # Load and prepare data
-train_folder = 'PATH/TO/TRAIN_FOLDER'
-test_folder = 'PATH/TO/TEST_FOLDER'
+train_folder = 'PATH TO TRAINING DIRECTORY'
+test_folder = 'PATH TO TESTING DIRECTORY'
 
 # Load training data
 X_train, y_train = load_data(train_folder)
@@ -64,7 +64,7 @@ mlp = MLPClassifier(
     alpha=0.0001,               # L2 regularization term
     batch_size=500,             # Mini-batch size
     learning_rate_init=0.001,
-    max_iter=50,                # Number of epochs
+    max_iter=150,                # Number of epochs
     verbose=True,
     random_state=42
 )
