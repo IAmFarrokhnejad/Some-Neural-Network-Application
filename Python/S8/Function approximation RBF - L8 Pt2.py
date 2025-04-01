@@ -1,82 +1,143 @@
-#Purpose of the work: Design and implementation of an RBF network with Python to estimate body fat percentage based on various body measurements provided in the bodyfat dataset
-#About the dataset(bodyfat): Each input feature is a 252x1 vector; Stored attributes: age, weight, height, neck, chest, abdomen, hip, thigh, knee, ankle, biceps, forearm, wrist
+# Purpose of the work: Design and implementation of an RBF network with Python to estimate body fat percentage based on various body measurements provided in the bodyfat dataset
+# About the dataset(bodyfat): Each input feature is a 252x1 vector; Stored attributes: age, weight, height, neck, chest, abdomen, hip, thigh, knee, ankle, biceps, forearm, wrist
 
 
-#Credits: Morteza Farrokhnejad, Ali Farrokhnejad
-#Based on the original work by Prof. Dr. Ahmet Rizaner
-
-
+# Credits: Morteza Farrokhnejad, Ali Farrokhnejad
+# Based on the original work by Prof. Dr. Ahmet Rizaner
 
 import numpy as np
 import matplotlib.pyplot as plt
-import neurolab as nl
-from sklearn.cluster import KMeans
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
+from sklearn.mixture import GaussianMixture
+from sklearn.feature_selection import SelectPercentile, f_regression
+from sklearn.linear_model import ElasticNetCV
+from sklearn.metrics import mean_squared_error
+from sklearn.pipeline import Pipeline
 
-# Function to calculate radial basis values for a set of inputs
+# Vectorized RBF function
 def rbf(x, centers, spread):
-    res = np.zeros((x.shape[0], len(centers)))
-    try:
-        for j in range(x.shape[1]):
-            for i, c in enumerate(centers):
-                res[:, i] += (np.exp(-(x[:,j].T - c)**2 / (2 * (spread**2)))).T
-    except IndexError:    
-        for i, c in enumerate(centers):
-            res[:, i] += (np.exp(-(x - c)**2 / (2 * (spread**2)))).T
-    finally:
-        return res
+    return np.exp(-np.linalg.norm(x[:, np.newaxis] - centers, axis=2)**2 / (2 * spread**2))
 
-# Assuming bodyfat.csv contains bodyfatInputs and bodyfatTargets
-data = np.genfromtxt('C:/Users/afr51/Downloads/Telegram Desktop/bodyfat.csv', delimiter=',')
-bodyfatInputs = data[:-1, :].T # Each row contains one data sample
-bodyfatTargets = data[-1, :].reshape(-1,1) # Column vector of classes (each row corresponds to respective row in X) 
+class RBFRidgeEstimator(BaseEstimator, RegressorMixin):
+    def __init__(self, n_centers=10, spread=3.0, alpha=1.0, l1_ratio=0.5):
+        self.n_centers = n_centers
+        self.spread = spread
+        self.alpha = alpha
+        self.l1_ratio = l1_ratio
+        self.scaler = StandardScaler()
+        self.feature_selector = SelectPercentile(f_regression, percentile=80)
+        self.model = None
+        
+    def get_params(self, deep=True):
+        return {
+            'n_centers': self.n_centers,
+            'spread': self.spread,
+            'alpha': self.alpha,
+            'l1_ratio': self.l1_ratio
+        }
+        
+    def set_params(self, **params):
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self
+        
+    def fit(self, X, y):
+        # Data preprocessing
+        X_scaled = self.scaler.fit_transform(X)
+        
+        # Find RBF centers using GMM
+        gmm = GaussianMixture(n_components=self.n_centers, random_state=42)
+        gmm.fit(X_scaled)
+        self.centers_ = gmm.means_
+        
+        # Generate RBF features
+        X_rbf = rbf(X_scaled, self.centers_, self.spread)
+        
+        # Feature selection
+        X_selected = self.feature_selector.fit_transform(X_rbf, y)
+        
+        # Configure and train regression model
+        self.model = ElasticNetCV(
+            alphas=[self.alpha],
+            l1_ratio=[self.l1_ratio],
+            cv=5,
+            max_iter=10000,
+            random_state=42
+        )
+        self.model.fit(X_selected, y)
+        return self
+        
+    def predict(self, X):
+        X_scaled = self.scaler.transform(X)
+        X_rbf = rbf(X_scaled, self.centers_, self.spread)
+        X_selected = self.feature_selector.transform(X_rbf)
+        return self.model.predict(X_selected)
 
-# Split the dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(bodyfatInputs, bodyfatTargets, test_size=0.2, random_state=3)
+# Load and prepare data
+dataset = 'PATH TO DATASET GOES HERE'
+data = np.genfromtxt(dataset, delimiter=',')
+X = data[:-1, :].T  # Input features (13 dimensions)
+y = data[-1, :]      # Target values
 
-# Standardize input data
-scaler = StandardScaler()
-X_train_std = scaler.fit_transform(X_train)
-X_test_std = scaler.transform(X_test)
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
-# Start training process
-centers_list = [150]
-for n_centers in centers_list:
+# Configure grid search
+param_grid = {
+    'n_centers': [12, 15, 18],      # Finer center count
+    'spread': [2.5, 3.0, 3.5],      # Intermediate spreads
+    'alpha': [0.05, 0.1, 0.2],      # Weaker regularization
+    'l1_ratio': [0.85, 0.9, 0.95]   # High L1 focus
+}
 
-    # Perform k-means clustering to choose centers        
-    kmeans = KMeans(n_clusters=n_centers, random_state=0).fit(X_train.reshape(-1, 1))
-    centers = kmeans.cluster_centers_.flatten()
+grid_search = GridSearchCV(
+    RBFRidgeEstimator(),
+    param_grid,
+    cv=3,
+    scoring='neg_mean_squared_error',
+    n_jobs=-1,
+    verbose=2
+)
 
-    # Pass inputs through hidden layer and standardize
-    Xtr_rbf = rbf(X_train_std, centers, 1)
-    Xtst_rbf = rbf(X_test_std, centers, 1)
-    Xtr_rbf_std = scaler.fit_transform(Xtr_rbf)
-    Xtst_rbf_std = scaler.transform(Xtst_rbf)
+# Execute grid search
+grid_search.fit(X_train, y_train)
 
-    # Create SLP for the rest of the network
-    net = nl.net.newp(np.column_stack([Xtr_rbf_std.min(axis=0), Xtr_rbf_std.max(axis=0)]), 1, transf= nl.net.trans.PureLin())
+# Best model evaluation
+best_model = grid_search.best_estimator_
+print("\nBest Parameters:", grid_search.best_params_)
+print(f"Train MSE: {mean_squared_error(y_train, best_model.predict(X_train)):.2f}")
+print(f"Test MSE: {mean_squared_error(y_test, best_model.predict(X_test)):.2f}")
 
-    # Train network
-    net.train(Xtr_rbf_std, y_train.reshape(-1, 1), epochs=1000, show=10, goal=1e-7, lr=0.00028)
+# Generate predictions
+y_pred = best_model.predict(X)
 
-    # Get outputs
-    ytr_pred = net.sim(Xtr_rbf_std)
-    yts_pred = net.sim(Xtst_rbf_std)
-
-    # Calculate and print the Mean Squared Error (MSE) on the training set
-    mse_train = mean_squared_error(y_train, ytr_pred)
-    mse_test = mean_squared_error(y_test, yts_pred)
-    print(f'NEWRB, neurons = {centers}, MSE on training set = {mse_train}, MSE on testing set = {mse_test}')
-
-# Predict the output on the entire dataset
-Y = net.sim(np.vstack([Xtr_rbf_std, Xtst_rbf_std]))
-
-# Plot regression
-plt.figure()
-plt.plot(bodyfatTargets, Y, 'o')
-plt.title('Regression plot')
-plt.xlabel('Actual Body Fat')
-plt.ylabel('Predicted Body Fat')
+# Regression plot
+plt.figure(figsize=(10, 6))
+plt.scatter(y, y_pred, alpha=0.6, edgecolors='w')
+plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--', lw=2)
+plt.title('Actual vs Predicted Body Fat Percentage')
+plt.xlabel('Actual Body Fat (%)')
+plt.ylabel('Predicted Body Fat (%)')
+plt.grid(True)
 plt.show()
+
+# Residual analysis
+residuals = y_test - best_model.predict(X_test)
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, residuals, alpha=0.6)
+plt.hlines(0, y.min(), y.max(), colors='r')
+plt.title('Residual Analysis')
+plt.xlabel('Actual Values')
+plt.ylabel('Residuals')
+plt.grid(True)
+plt.show()
+
+
+# TODo:
+# 1. More hyperparameter tuning
+# 2. Feature engineering
+# 3. More advanced methods
